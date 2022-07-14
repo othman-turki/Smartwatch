@@ -8,64 +8,87 @@
 #include <Wire.h>
 #endif
 
+// #include "MAX30105.h"
+// #include "heartRate.h"
+
+// OLED CONSTRUCTOR
 // U8G2_SSD1306_128X64_NONAME_1_SW_I2C u8g2(U8G2_R0, /* clock=*/SCL, /* data=*/SDA, /* reset=*/U8X8_PIN_NONE);
 U8G2_SH1106_128X64_NONAME_1_HW_I2C u8g2(U8G2_R0, /* reset=*/U8X8_PIN_NONE);
 
-u8g2_uint_t offset;         // current offset for the scrolling text
-u8g2_uint_t width;          // pixel width of the scrolling text (must be lesser than 128 unless U8G2_16BIT is defined
-const char *text = "U8g2 "; // scroll this text from right to left
+// SMARTWATCH SENSOR
+// MAX30105 particleSensor;
+
+// const byte RATE_SIZE = 4; // Increase this for more averaging. 4 is good.
+// byte rates[RATE_SIZE];    // Array of heart rates
+// byte rateSpot = 0;
+// long lastBeat = 0; // Time at which the last beat occurred
+
+// float beatsPerMinute;
+// int beatAvg;
 
 void setup(void)
 {
+  Serial.begin(115200);
+  Serial.println("Initializing...");
 
-  /* U8g2 Project: SSD1306 Test Board */
-  // pinMode(10, OUTPUT);
-  // pinMode(9, OUTPUT);
-  // digitalWrite(10, 0);
-  // digitalWrite(9, 0);
+  // Initialize sensor
+  // if (!particleSensor.begin(Wire, I2C_SPEED_FAST)) // Use default I2C port, 400kHz speed
+  // {
+  //   Serial.println("MAX30105 was not found. Please check wiring/power. ");
+  //   while (1)
+  //     ;
+  // }
+  // Serial.println("Place your index finger on the sensor with steady pressure.");
 
-  /* U8g2 Project: T6963 Test Board */
-  // pinMode(18, OUTPUT);
-  // digitalWrite(18, 1);
-
-  /* U8g2 Project: KS0108 Test Board */
-  // pinMode(16, OUTPUT);
-  // digitalWrite(16, 0);
+  // particleSensor.setup();                    // Configure sensor with default settings
+  // particleSensor.setPulseAmplitudeRed(0x0A); // Turn Red LED to low to indicate sensor is running
+  // particleSensor.setPulseAmplitudeGreen(0);  // Turn off Green LED
 
   u8g2.begin();
-
-  u8g2.setFont(u8g2_font_inb30_mr); // set the target font to calculate the pixel width
-  width = u8g2.getUTF8Width(text);  // calculate the pixel width of the text
-
-  u8g2.setFontMode(0); // enable transparent mode, which is faster
-}
-
-void loop(void)
-{
-  u8g2_uint_t x;
 
   u8g2.firstPage();
   do
   {
-
-    // draw the scrolling text at current offset
-    x = offset;
-    u8g2.setFont(u8g2_font_inb30_mr); // set the target font
-    do
-    {                                     // repeated drawing of the scrolling text...
-      u8g2.drawUTF8(x, 30, text);         // draw the scolling text
-      x += width;                         // add the pixel width of the scrolling text
-    } while (x < u8g2.getDisplayWidth()); // draw again until the complete display is filled
-
-    u8g2.setFont(u8g2_font_inb16_mr); // draw the current pixel width
-    u8g2.setCursor(0, 58);
-    u8g2.print(width); // this value must be lesser than 128 unless U8G2_16BIT is set
-
+    u8g2.setFont(u8g2_font_ncenB10_tr);
+    u8g2.drawStr(0, 32, "Hello World!");
   } while (u8g2.nextPage());
+  delay(1000);
+}
 
-  offset -= 1; // scroll by one pixel
-  if ((u8g2_uint_t)offset < (u8g2_uint_t)-width)
-    offset = 0; // start over again
+void loop(void)
+{
+  // long irValue = particleSensor.getIR();
 
-  delay(10); // do some small delay
+  // if (checkForBeat(irValue) == true)
+  // {
+  //   // We sensed a beat!
+  //   long delta = millis() - lastBeat;
+  //   lastBeat = millis();
+
+  //   beatsPerMinute = 60 / (delta / 1000.0);
+
+  //   if (beatsPerMinute < 255 && beatsPerMinute > 20)
+  //   {
+  //     rates[rateSpot++] = (byte)beatsPerMinute; // Store this reading in the array
+  //     rateSpot %= RATE_SIZE;                    // Wrap variable
+
+  //     // Take average of readings
+  //     beatAvg = 0;
+  //     for (byte x = 0; x < RATE_SIZE; x++)
+  //       beatAvg += rates[x];
+  //     beatAvg /= RATE_SIZE;
+  //   }
+  // }
+
+  // Serial.print("IR=");
+  // Serial.print(irValue);
+  // Serial.print(", BPM=");
+  // Serial.print(beatsPerMinute);
+  // Serial.print(", Avg BPM=");
+  // Serial.print(beatAvg);
+
+  // if (irValue < 50000)
+  //   Serial.print(" No finger?");
+
+  // Serial.println();
 }
