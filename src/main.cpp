@@ -11,6 +11,9 @@
 #include "MAX30105.h"
 #include "heartRate.h"
 
+#define SCREEN_WIDTH 128 // OLED display width, in pixels
+#define SCREEN_HEIGHT 64 // OLED display height, in pixels
+
 // OLED CONSTRUCTOR
 // U8G2_SSD1306_128X64_NONAME_1_SW_I2C u8g2(U8G2_R0, /* clock=*/SCL, /* data=*/SDA, /* reset=*/U8X8_PIN_NONE);
 U8G2_SH1106_128X64_NONAME_1_HW_I2C u8g2(U8G2_R0, /* reset=*/U8X8_PIN_NONE);
@@ -22,10 +25,13 @@ const byte RATE_SIZE = 4; // Increase this for more averaging. 4 is good.
 byte rates[RATE_SIZE];    // Array of heart rates
 byte rateSpot = 0;
 long lastBeat = 0; // Time at which the last beat occurred
-long prevDisplay = 0;
 
 float beatsPerMinute;
 int beatAvg;
+
+long prevDisplay = 0;
+int _circularBuffer[SCREEN_WIDTH]; // fast way to store values
+int _curWriteIndex = 0;            // tracks where we are in the circular buffer
 
 void setup(void)
 {
@@ -84,19 +90,46 @@ void loop(void)
     }
   }
 
-  Serial.print("IR=");
-  Serial.print(irValue);
-  Serial.print(", BPM=");
-  Serial.print(beatsPerMinute);
-  Serial.print(", Avg BPM=");
-  Serial.print(beatAvg);
+  /*
+    // Serial.print("IR=");
+    // Serial.print(irValue);
+    // Serial.print(", BPM=");
+    // Serial.print(beatsPerMinute);
+    // Serial.print(", Avg BPM=");
+    // Serial.print(beatAvg);
 
-  if (irValue < 50000)
-    Serial.print(" No finger?");
+    // if (irValue < 50000)
+    //   Serial.print(" No finger?");
 
-  Serial.println();
+    // Serial.println();
+    */
 
-  if ((millis() - prevDisplay) > 1000)
+  _circularBuffer[_curWriteIndex++] = int(beatsPerMinute);
+  // Set the circular buffer index back to zero when it reaches the right of the screen
+  if (_curWriteIndex >= SCREEN_WIDTH)
+  {
+    _curWriteIndex = 0;
+  }
+
+  int xPos = 0;
+  for (int i = _curWriteIndex; i < SCREEN_WIDTH; i++)
+  {
+    int beatsPerMinute = _circularBuffer[i];
+    int lineHeight = map(beatsPerMinute, 20, 255, 0, SCREEN_HEIGHT);
+    int yPos = SCREEN_HEIGHT - lineHeight;
+    xPos++;
+  }
+
+  // for (int i = 0; i < _curWriteIndex; i++)
+  // {
+  //   int beatsPerMinute = _circularBuffer[i];
+  //   int lineHeight = map(beatsPerMinute, 20, 255, 0, SCREEN_HEIGHT);
+  //   int yPos = SCREEN_HEIGHT - lineHeight;
+  //   u8g2.drawVLine(xPos, yPos, lineHeight);
+  //   xPos++;
+  // }
+
+  if ((millis() - prevDisplay) > 100)
   {
     prevDisplay = millis();
 
@@ -105,6 +138,8 @@ void loop(void)
     {
       u8g2.setFont(u8g2_font_helvR08_te);
       u8g2.drawStr(4, 12, ("Avg BPM = " + String(beatAvg)).c_str());
+
+      u8g2.drawVLine(xPos, 16, SCREEN_HEIGHT - 16);
 
     } while (u8g2.nextPage());
   }
