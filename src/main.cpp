@@ -49,8 +49,11 @@ void setup(void)
   u8g2.firstPage();
   do
   {
-    u8g2.setFont(u8g2_font_ncenB10_tr);
-    u8g2.drawStr(0, 32, "Hello World!");
+    u8g2.setFont(u8g2_font_helvB14_te);
+    u8g2.drawStr(26, 14 + 12, "Medical");
+    u8g2.drawStr(48, 36 + 12, "Pro");
+    delay(64);
+
   } while (u8g2.nextPage());
   delay(1000);
 }
