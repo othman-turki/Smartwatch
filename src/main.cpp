@@ -14,11 +14,7 @@
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 64 // OLED display height, in pixels
 
-// OLED CONSTRUCTOR
-// U8G2_SSD1306_128X64_NONAME_1_SW_I2C u8g2(U8G2_R0, /* clock=*/SCL, /* data=*/SDA, /* reset=*/U8X8_PIN_NONE);
 U8G2_SH1106_128X64_NONAME_1_HW_I2C u8g2(U8G2_R0, /* reset=*/U8X8_PIN_NONE);
-
-// SMARTWATCH SENSOR
 MAX30105 particleSensor;
 
 const byte RATE_SIZE = 4; // Increase this for more averaging. 4 is good.
@@ -29,9 +25,13 @@ long lastBeat = 0; // Time at which the last beat occurred
 float beatsPerMinute;
 int beatAvg;
 
-long prevDisplay = 0;
-int _circularBuffer[SCREEN_WIDTH]; // fast way to store values
-int _curWriteIndex = 0;            // tracks where we are in the circular buffer
+// long prevDisplay = 0;
+int circularBuffer[SCREEN_WIDTH - 16];
+int curWriteIndex = 0;
+int xPos = 0;
+int yPos = 0;
+int bpm = 0;
+int lineHeight = 0;
 
 void setup(void)
 {
@@ -45,7 +45,7 @@ void setup(void)
     while (1)
       ;
   }
-  // Serial.println("Place your index finger on the sensor with steady pressure.");
+  Serial.println("Place your index finger on the sensor with steady pressure.");
 
   particleSensor.setup();                    // Configure sensor with default settings
   particleSensor.setPulseAmplitudeRed(0x0A); // Turn Red LED to low to indicate sensor is running
@@ -68,7 +68,6 @@ void setup(void)
 void loop(void)
 {
   long irValue = particleSensor.getIR();
-
   if (checkForBeat(irValue) == true)
   {
     // We sensed a beat!
@@ -90,35 +89,27 @@ void loop(void)
     }
   }
 
-  /*
-    // Serial.print("IR=");
-    // Serial.print(irValue);
-    // Serial.print(", BPM=");
-    // Serial.print(beatsPerMinute);
-    // Serial.print(", Avg BPM=");
-    // Serial.print(beatAvg);
+  Serial.print("IR=");
+  Serial.print(irValue);
+  Serial.print(", BPM=");
+  Serial.print(beatsPerMinute);
+  Serial.print(", Avg BPM=");
+  Serial.print(beatAvg);
+  if (irValue < 50000)
+    Serial.print(" No finger?");
+  Serial.println();
 
-    // if (irValue < 50000)
-    //   Serial.print(" No finger?");
-
-    // Serial.println();
-    */
-
-  _circularBuffer[_curWriteIndex++] = int(beatsPerMinute);
+  circularBuffer[curWriteIndex++] = (int)beatsPerMinute;
   // Set the circular buffer index back to zero when it reaches the right of the screen
-  if (_curWriteIndex >= SCREEN_WIDTH)
+  if (curWriteIndex >= (SCREEN_WIDTH - 16))
   {
-    _curWriteIndex = 0;
+    curWriteIndex = 0;
   }
 
-  int xPos = 0;
-  for (int i = _curWriteIndex; i < SCREEN_WIDTH; i++)
-  {
-    int beatsPerMinute = _circularBuffer[i];
-    int lineHeight = map(beatsPerMinute, 20, 255, 0, SCREEN_HEIGHT);
-    int yPos = SCREEN_HEIGHT - lineHeight;
-    xPos++;
-  }
+  bpm = circularBuffer[curWriteIndex];
+  lineHeight = map(bpm, 0, 255, 0, 40);
+  // Serial.printf("BPM= %d, LH: %d\n", bpm, lineHeight);
+  // Serial.printf("xPos= %d, yPos: %d\n", curWriteIndex, lineHeight);
 
   // for (int i = 0; i < _curWriteIndex; i++)
   // {
@@ -129,18 +120,23 @@ void loop(void)
   //   xPos++;
   // }
 
-  if ((millis() - prevDisplay) > 100)
+  u8g2.firstPage();
+  do
   {
-    prevDisplay = millis();
+    u8g2.setFont(u8g2_font_helvB08_te);
+    u8g2.drawStr(8, 16, ("BPM " + String(bpm) + "    AVG " + String(beatAvg)).c_str());
 
-    u8g2.firstPage();
-    do
+    xPos = 0;
+    for (int i = curWriteIndex; i < (SCREEN_WIDTH - 16); i++)
     {
-      u8g2.setFont(u8g2_font_helvR08_te);
-      u8g2.drawStr(4, 12, ("Avg BPM = " + String(beatAvg)).c_str());
+      u8g2.drawPixel((xPos + 8), (SCREEN_HEIGHT - 8) - lineHeight);
+      xPos++;
+    }
+    for (int i = 0; i < curWriteIndex; i++)
+    {
+      u8g2.drawPixel((xPos + 8), (SCREEN_HEIGHT - 8) - lineHeight);
+      xPos++;
+    }
 
-      u8g2.drawVLine(xPos, 16, SCREEN_HEIGHT - 16);
-
-    } while (u8g2.nextPage());
-  }
+  } while (u8g2.nextPage());
 }
